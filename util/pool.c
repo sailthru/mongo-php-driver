@@ -83,7 +83,7 @@ int mongo_util_pool_refresh(mongo_server *server, time_t timeout TSRMLS_DC) {
   if ((monitor = mongo_util_pool__get_monitor(server TSRMLS_CC)) == 0) {
       return FAILURE;
   }
-  timeout = monitor->timeout;
+  timeout = (monitor->timeout > 0) ? monitor->timeout : MONGO_RS_TIMEOUT;
 
   if (mongo_util_pool_init(server, timeout TSRMLS_CC) == FAILURE) {
     return FAILURE;
