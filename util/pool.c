@@ -559,7 +559,7 @@ int mongo_util_pool__connect(stack_monitor *monitor, mongo_server *server, zval 
   if (mongo_util_connect(server, monitor, errmsg) == FAILURE) {
     server->connected = 0;
     if (monitor->timeout <= 0) {
-        zend_throw_exception(mongo_ce_ConnectionException, "Connection timed out", 0 TSRMLC_CC);
+        zend_throw_exception(mongo_ce_ConnectionException, "Connection timed out", 0 TSRMLS_CC);
     }
     return FAILURE;
   }
