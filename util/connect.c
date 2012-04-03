@@ -48,7 +48,7 @@ int mongo_util_connect(mongo_server *server, stack_monitor *monitor, zval *errms
   int family;
   struct timeval tval;
   int connected = FAILURE, status = FAILURE;
-  timeout = monitor->timeout;
+  int timeout = monitor->timeout;
 
 #ifdef WIN32
   WORD version;
