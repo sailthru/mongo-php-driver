@@ -31,6 +31,9 @@
 #include "log.h"
 #include "rs.h"
 
+// Throw MongoConnectionException when required.
+extern zend_class_entry *mongo_ce_ConnectionException;
+
 ZEND_EXTERN_MODULE_GLOBALS(mongo);
 
 zend_class_entry *mongo_ce_Pool;
@@ -74,6 +77,13 @@ int mongo_util_pool_refresh(mongo_server *server, time_t timeout TSRMLS_DC) {
 
   // make sure we're disconnected before reconnecting
   mongo_util_pool_close(server, CHECK_CONNS TSRMLS_CC);
+
+  // pass the reduced timeout variable we had set
+  stack_monitor *monitor;
+  if ((monitor = mongo_util_pool__get_monitor(server TSRMLS_CC)) == 0) {
+      return FAILURE;
+  }
+  timeout = monitor->timeout;
 
   if (mongo_util_pool_init(server, timeout TSRMLS_CC) == FAILURE) {
     return FAILURE;
@@ -546,8 +556,11 @@ int mongo_util_pool__connect(stack_monitor *monitor, mongo_server *server, zval 
     return FAILURE;
   }
 
-  if (mongo_util_connect(server, monitor->timeout, errmsg) == FAILURE) {
+  if (mongo_util_connect(server, monitor, errmsg) == FAILURE) {
     server->connected = 0;
+    if (monitor->timeout <= 0) {
+        zend_throw_exception(mongo_ce_ConnectionException, "Connection timed out", 0 TSRMLC_CC);
+    }
     return FAILURE;
   }
 

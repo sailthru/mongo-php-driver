@@ -40,7 +40,7 @@ void mongo_util_connect_buildinfo(zval *this_ptr TSRMLS_DC);
  * Actually make the network connection.  Returns SUCCESS/FAILURE and sets
  * errmsg, never throws exceptions.
  */
-int mongo_util_connect(mongo_server *server, int timeout, zval *errmsg);
+int mongo_util_connect(mongo_server *server, stack_monitor *monitor, zval *errmsg);
 
 /**
  * If this connection should be authenticated, try to authenticate.  Returns

@@ -34,19 +34,21 @@
 #include "../php_mongo.h"
 #include "../mongo.h"
 #include "../db.h"
+#include "pool.h"
 #include "connect.h"
 #include "log.h"
 
 extern zend_class_entry *mongo_ce_Mongo;
 ZEND_EXTERN_MODULE_GLOBALS(mongo);
 
-int mongo_util_connect(mongo_server *server, int timeout, zval *errmsg) {
+int mongo_util_connect(mongo_server *server, stack_monitor *monitor, zval *errmsg) {
   struct sockaddr* sa;
   struct sockaddr_in si;
   socklen_t sn;
   int family;
   struct timeval tval;
   int connected = FAILURE, status = FAILURE;
+  timeout = monitor->timeout;
 
 #ifdef WIN32
   WORD version;
@@ -114,6 +116,7 @@ int mongo_util_connect(mongo_server *server, int timeout, zval *errmsg) {
   }
 
   setsockopt(server->socket, SOL_SOCKET, SO_KEEPALIVE, &yes, INT_32);
+  //setsockopt(server->socket, SOL_SOCKET, SO_RCVTIMEO, &tval, sizeof(tval));
   setsockopt(server->socket, IPPROTO_TCP, TCP_NODELAY, &yes, INT_32);
 
 #ifdef WIN32
@@ -149,12 +152,27 @@ int mongo_util_connect(mongo_server *server, int timeout, zval *errmsg) {
       FD_ZERO(&eset);
       FD_SET(server->socket, &eset);
 
+      struct timeval tstart, tend, tout = { tval.tv_sec, tval.tv_usec };
+      gettimeofday(&tstart, 0);
       if (select(server->socket+1, &rset, &wset, &eset, &tval) == 0) {
         if (errmsg) {
           ZVAL_STRING(errmsg, strerror(errno), 1);
         }
         mongo_util_disconnect(server);
         return FAILURE;
+      }
+      gettimeofday(&tend, 0);
+
+      // Retrieve the time taken to perform select(2)
+      tval.tv_sec = tend.tv_sec - tstart.tv_sec;
+      tval.tv_usec = tend.tv_usec - tstart.tv_usec;
+      int timetaken = ((tval.tv_sec * 1e+6) + tval.tv_usec) * 1e-3; // Convert time into ms.
+      timeout -= timetaken;
+      monitor->timeout = timeout;
+      if (timeout <= 0) {
+          // If timeout occurs, reclaim memory and exit gracefully
+          mongo_util_disconnect(server);
+          return FAILURE;
       }
 
       // if our descriptor has an error
