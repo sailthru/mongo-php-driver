@@ -168,7 +168,7 @@ int mongo_util_connect(mongo_server *server, stack_monitor *monitor, zval *errms
       tval.tv_usec = tend.tv_usec - tstart.tv_usec;
       int timetaken = ((tval.tv_sec * 1e+6) + tval.tv_usec) * 1e-3; // Convert time into ms.
       timeout -= timetaken;
-      monitor->timeout = timeout;
+      //monitor->timeout = timeout;
       if (timeout <= 0) {
           // If timeout occurs, reclaim memory and exit gracefully
           mongo_util_disconnect(server);
